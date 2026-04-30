@@ -14,7 +14,7 @@ spec:
     - name: copy-fail-destroyer
       rules:
         - alert: CopyFailVulnerable
-          expr: cve_2026_31431_vulnerable == 1
+          expr: count(cve_2026_31431_vulnerable == 1) > 0
           for: 1m
           labels:
             severity: critical
@@ -25,11 +25,11 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
           annotations:
-            summary: "Node {{ "{{ $labels.node }}" }} is vulnerable to CVE-2026-31431 (Copy Fail)"
-            description: "Kernel is vulnerable and the AF_ALG module is reachable. Remediation has not succeeded."
+            summary: "{{ "{{ $value }}" }} node(s) vulnerable to CVE-2026-31431 (Copy Fail)"
+            description: "Kernel is vulnerable and the AF_ALG module is reachable on {{ "{{ $value }}" }} node(s). Remediation has not succeeded."
 
         - alert: CopyFailKernelNeedsPatching
-          expr: cve_2026_31431_kernel_needs_patching == 1
+          expr: count(cve_2026_31431_kernel_needs_patching == 1) > 0
           for: 1m
           labels:
             severity: warning
@@ -40,11 +40,11 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
           annotations:
-            summary: "Node {{ "{{ $labels.node }}" }} kernel needs patching for CVE-2026-31431"
-            description: "Kernel version is not patched for CVE-2026-31431. Module may be unreachable (mitigated) but the kernel should still be updated."
+            summary: "{{ "{{ $value }}" }} node(s) need kernel patching for CVE-2026-31431"
+            description: "{{ "{{ $value }}" }} node(s) are running unpatched kernels for CVE-2026-31431. Module may be unreachable (mitigated) but the kernel should still be updated."
 
         - alert: CopyFailRemediationFailed
-          expr: cve_2026_31431_module_reachable == 1 and cve_2026_31431_remediation_applied == 0
+          expr: count((cve_2026_31431_module_reachable == 1) and (cve_2026_31431_remediation_applied == 0)) > 0
           for: 3m
           labels:
             severity: warning
@@ -55,6 +55,6 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
           annotations:
-            summary: "Node {{ "{{ $labels.node }}" }} AF_ALG module still reachable after remediation attempt"
-            description: "The agent failed to unload the algif_aead module. Manual intervention may be required."
+            summary: "{{ "{{ $value }}" }} node(s) failed AF_ALG module remediation"
+            description: "The agent failed to unload the algif_aead module on {{ "{{ $value }}" }} node(s). Manual intervention may be required."
 {{- end }}
