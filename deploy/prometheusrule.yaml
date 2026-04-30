@@ -1,0 +1,37 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: copy-fail-destroyer
+  namespace: copy-fail-destroyer
+  labels:
+    app: copy-fail-destroyer
+spec:
+  groups:
+    - name: copy-fail-destroyer
+      rules:
+        - alert: CopyFailVulnerable
+          expr: cve_2026_31431_vulnerable == 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Node {{ $labels.node }} is vulnerable to CVE-2026-31431 (Copy Fail)"
+            description: "Kernel is vulnerable and the AF_ALG module is reachable. Remediation has not succeeded."
+
+        - alert: CopyFailKernelNeedsPatching
+          expr: cve_2026_31431_kernel_needs_patching == 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node {{ $labels.node }} kernel needs patching for CVE-2026-31431"
+            description: "Kernel version is not patched for CVE-2026-31431. Module may be unreachable (mitigated) but the kernel should still be updated."
+
+        - alert: CopyFailRemediationFailed
+          expr: cve_2026_31431_module_reachable == 1 and cve_2026_31431_remediation_applied == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node {{ $labels.node }} AF_ALG module still reachable after remediation attempt"
+            description: "The agent failed to unload the algif_aead module. Manual intervention may be required."

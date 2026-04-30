@@ -107,6 +107,27 @@ helm install copy-fail-destroyer oci://ghcr.io/norskhelsenett/helm/copy-fail-des
   --set metrics.podMonitor.enabled=true
 ```
 
+Alert rules (`PrometheusRule`) for Alertmanager are also available:
+
+```bash
+# Raw manifest
+kubectl apply -f deploy/prometheusrule.yaml
+
+# Or via Helm with extra alert labels
+helm install copy-fail-destroyer oci://ghcr.io/norskhelsenett/helm/copy-fail-destroyer \
+  --namespace copy-fail-destroyer --create-namespace \
+  --set metrics.prometheusRule.enabled=true \
+  --set metrics.prometheusRule.extraAlertLabels.team=platform
+```
+
+Three alerts are defined:
+
+| Alert | Severity | Description |
+|---|---|---|
+| `CopyFailVulnerable` | critical | Kernel is vulnerable **and** AF_ALG module is reachable |
+| `CopyFailKernelNeedsPatching` | warning | Kernel version is unpatched (module may be mitigated) |
+| `CopyFailRemediationFailed` | warning | Module still reachable after remediation attempt |
+
 ## CI/CD
 
 A GitHub Actions workflow (`.github/workflows/build.yaml`) triggers on versioned tags (`v*`). It:
