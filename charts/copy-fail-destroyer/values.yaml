@@ -14,6 +14,11 @@ resources:
 metrics:
   port: 9100
   prometheusScrape: true
+  podMonitor:
+    enabled: false
+    interval: 60s
+    scrapeTimeout: 10s
+    labels: {}
 
 namespace:
   create: true

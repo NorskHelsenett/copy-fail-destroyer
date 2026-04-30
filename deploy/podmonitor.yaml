@@ -1,0 +1,14 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: copy-fail-destroyer
+  namespace: copy-fail-destroyer
+  labels:
+    app: copy-fail-destroyer
+spec:
+  selector:
+    matchLabels:
+      app: copy-fail-destroyer
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 60s

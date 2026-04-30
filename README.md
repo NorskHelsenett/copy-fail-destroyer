@@ -93,6 +93,20 @@ kubectl apply -f deploy/argocd-application.yaml
 
 The DaemonSet includes Prometheus scrape annotations (`prometheus.io/scrape: "true"`, port `9100`).
 
+### Prometheus Operator
+
+If you use the Prometheus Operator, deploy the `PodMonitor` to have metrics scraped automatically:
+
+```bash
+# Raw manifest
+kubectl apply -f deploy/podmonitor.yaml
+
+# Or via Helm
+helm install copy-fail-destroyer oci://ghcr.io/norskhelsenett/helm/copy-fail-destroyer \
+  --namespace copy-fail-destroyer --create-namespace \
+  --set metrics.podMonitor.enabled=true
+```
+
 ## CI/CD
 
 A GitHub Actions workflow (`.github/workflows/build.yaml`) triggers on versioned tags (`v*`). It:
