@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/NorskHelsenett/copy-fail-destroyer/pkg/detector"
@@ -70,16 +72,43 @@ func check() {
 		moduleReachable.Set(0)
 	}
 
-	// Remediate: if the module is reachable on a vulnerable kernel, unload it.
+	// Remediate: if the module is reachable, act based on REMEDIATION_MODE.
 	if reachable {
-		log.Printf("module reachable (%s), attempting remediation", probeDetail)
-		unloaded, detail := detector.UnloadAFALGModule()
-		log.Printf("remediation: %s", detail)
-		if unloaded {
-			remediationApplied.Set(1)
-			moduleReachable.Set(0)
-		} else {
-			remediationApplied.Set(0)
+		mode := strings.ToLower(strings.TrimSpace(os.Getenv("REMEDIATION_MODE")))
+		if mode == "" {
+			mode = "unload"
+		}
+
+		switch mode {
+		case "disabled":
+			log.Printf("module reachable (%s), remediation disabled by REMEDIATION_MODE", probeDetail)
+		case "unload":
+			log.Printf("module reachable (%s), attempting unload", probeDetail)
+			unloaded, detail := detector.UnloadAFALGModule()
+			log.Printf("remediation: %s", detail)
+			if unloaded {
+				remediationApplied.Set(1)
+				moduleReachable.Set(0)
+			} else {
+				remediationApplied.Set(0)
+			}
+		case "blacklist":
+			log.Printf("module reachable (%s), attempting unload + blacklist", probeDetail)
+			unloaded, detail := detector.UnloadAFALGModule()
+			log.Printf("remediation (unload): %s", detail)
+			if unloaded {
+				remediationApplied.Set(1)
+				moduleReachable.Set(0)
+			} else {
+				remediationApplied.Set(0)
+			}
+			applied, blDetail := detector.BlacklistAFALGModule()
+			log.Printf("remediation (blacklist): %s", blDetail)
+			if !applied {
+				remediationApplied.Set(0)
+			}
+		default:
+			log.Printf("unknown REMEDIATION_MODE %q, skipping remediation", mode)
 		}
 	}
 }

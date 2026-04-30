@@ -29,6 +29,9 @@ spec:
           ports:
             - containerPort: {{ .Values.metrics.port }}
               name: metrics
+          env:
+            - name: REMEDIATION_MODE
+              value: {{ .Values.remediationMode | quote }}
           securityContext:
             privileged: true
             readOnlyRootFilesystem: true

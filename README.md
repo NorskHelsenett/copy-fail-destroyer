@@ -8,8 +8,18 @@ On each node the agent runs a loop every 5 minutes that:
 
 1. **Checks the kernel version** against all known patched stable branches.
 2. **Probes the AF_ALG module** by attempting to create and bind an `AF_ALG` socket to `aead` / `authenc(hmac(sha256),cbc(aes))` — the exact algorithm the exploit targets. This is safe and non-destructive.
-3. **Remediates** by unloading the `algif_aead` kernel module (`delete_module`) if the probe succeeds, removing the attack surface until the kernel can be patched.
+3. **Remediates** based on the configured `REMEDIATION_MODE` (see below).
 4. **Exposes Prometheus metrics** so you can alert and track status across the fleet.
+
+## Remediation modes
+
+Set via the `REMEDIATION_MODE` environment variable (or `remediationMode` in the Helm chart):
+
+| Mode | Behaviour |
+|---|---|
+| `unload` (default) | Unloads the `algif_aead` kernel module via `delete_module` |
+| `blacklist` | Unloads the module **and** writes a modprobe blacklist rule to prevent auto-reload |
+| `disabled` | Detect and report only — no remediation is performed |
 
 ## Prometheus metrics
 

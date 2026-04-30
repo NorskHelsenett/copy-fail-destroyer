@@ -26,6 +26,9 @@ metrics:
     #  team: platform
     #  environment: production
 
+# Remediation mode: "unload" (default), "blacklist" (unload + modprobe blacklist), or "disabled" (detect only)
+remediationMode: unload
+
 namespace:
   create: true
   podSecurityLabels: true
