@@ -1,11 +1,6 @@
 # copy-fail-destroyer
 
-A Kubernetes DaemonSet agent that detects and remediates Linux kernel vulnerabilities in the `algif_aead` subsystem:
-
-- [CVE-2022-27666](https://nvd.nist.gov/vuln/detail/CVE-2022-27666) — ESP6 / AF_ALG heap buffer overflow
-- [CVE-2026-31431](https://nvd.nist.gov/vuln/detail/CVE-2026-31431) ("Copy Fail") — `algif_aead` in-place logic flaw allowing unprivileged page-cache writes
-
-Both are exploitable via the `AF_ALG` socket interface and share the same remediation: unloading the `algif_aead` kernel module.
+A Kubernetes DaemonSet agent that detects and remediates [CVE-2026-31431](https://nvd.nist.gov/vuln/detail/CVE-2026-31431) ("Copy Fail") — an `algif_aead` in-place logic flaw in the Linux kernel allowing unprivileged page-cache writes via the `AF_ALG` socket interface.
 
 ## What it does
 
@@ -22,20 +17,12 @@ All metrics are exposed on `:9100/metrics`.
 
 | Metric | Description |
 |---|---|
-| `cve_2022_27666_kernel_needs_patching` | `1` if the kernel version is not patched for CVE-2022-27666 |
-| `cve_2022_27666_vulnerable` | `1` if the kernel is vulnerable **and** the module is reachable (actively exploitable) |
 | `cve_2026_31431_kernel_needs_patching` | `1` if the kernel version is not patched for CVE-2026-31431 |
 | `cve_2026_31431_vulnerable` | `1` if the kernel is vulnerable to CVE-2026-31431 **and** the module is reachable |
-| `cve_2022_27666_module_reachable` | `1` if the `AF_ALG` aead algorithm can be bound |
-| `cve_2022_27666_remediation_applied` | `1` if the `algif_aead` module was successfully unloaded |
+| `cve_2026_31431_module_reachable` | `1` if the `AF_ALG` aead algorithm can be bound |
+| `cve_2026_31431_remediation_applied` | `1` if the `algif_aead` module was successfully unloaded |
 
 ## Patched kernel versions
-
-### CVE-2022-27666
-
-- `5.17.0+` (mainline)
-- `5.16.15`, `5.15.29`, `5.10.106`, `5.4.185`
-- `4.19.235`, `4.14.272`, `4.9.307`
 
 ### CVE-2026-31431 (Copy Fail)
 
@@ -48,7 +35,6 @@ All metrics are exposed on `:9100/metrics`.
 ```
 cmd/destroyer/main.go          # Entry point — metrics server, check loop, remediation
 pkg/detector/
-  cve202227666.go              # CVE-2022-27666 detection, KernelNeedsPatching()
   cve202631431.go              # CVE-2026-31431 (Copy Fail) detection
   probe_linux.go               # AF_ALG module probe (Linux)
   probe_other.go               # Probe stub (non-Linux)
@@ -84,8 +70,11 @@ The agent runs in a dedicated namespace with a `privileged` Pod Security Admissi
 
 All other capabilities are dropped, and the root filesystem is read-only.
 
+If your cluster uses Kyverno, apply the policy exceptions first — the agent requires root and capabilities that standard policies block:
+
 ```bash
 kubectl apply -f deploy/namespace.yaml
+kubectl apply -f deploy/policy-exceptions.yaml
 kubectl apply -f deploy/daemonset.yaml
 ```
 

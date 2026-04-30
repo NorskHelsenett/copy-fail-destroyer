@@ -2,6 +2,7 @@ package detector
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"golang.org/x/sys/unix"
@@ -82,4 +83,33 @@ func checkCVE202631431(major, minor, patch int, release string) (vulnerable bool
 	// Anything else between 4.14 and 6.18/6.19/7.0 — no stable backport
 	// available, so the kernel is vulnerable.
 	return true, fmt.Sprintf("kernel %s is in the affected range (4.14 – 6.18.21 / 6.19.11) with no backport available", release)
+}
+
+// parseKernelVersion extracts major.minor.patch from a release string like
+// "5.15.28-generic".
+func parseKernelVersion(release string) (major, minor, patch int, err error) {
+	// Strip everything after the first non-version character.
+	ver := release
+	for i, c := range release {
+		if c != '.' && (c < '0' || c > '9') {
+			ver = release[:i]
+			break
+		}
+	}
+
+	parts := strings.SplitN(ver, ".", 4)
+	if len(parts) < 3 {
+		return 0, 0, 0, fmt.Errorf("expected at least major.minor.patch, got %q", ver)
+	}
+
+	major, err = strconv.Atoi(parts[0])
+	if err != nil {
+		return
+	}
+	minor, err = strconv.Atoi(parts[1])
+	if err != nil {
+		return
+	}
+	patch, err = strconv.Atoi(parts[2])
+	return
 }

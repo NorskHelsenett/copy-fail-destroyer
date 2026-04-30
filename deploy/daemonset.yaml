@@ -17,22 +17,18 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9100"
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: destroyer
-          image: ghcr.io/norskhelsenett/copy-fail-destroyer:latest
+          image: ghcr.io/norskhelsenett/copy-fail-destroyer:0.1.2
           ports:
             - containerPort: 9100
               name: metrics
           securityContext:
-            runAsUser: 0
-            capabilities:
-              add:
-                - SYS_MODULE
-                - NET_ADMIN
-              drop:
-                - ALL
+            privileged: true
             readOnlyRootFilesystem: true
-            allowPrivilegeEscalation: false
           resources:
             requests:
               cpu: 10m

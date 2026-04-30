@@ -11,23 +11,6 @@ import (
 )
 
 var (
-	kernelVulnerable = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "cve_2022_27666_vulnerable",
-		Help: "1 if the kernel is vulnerable to CVE-2022-27666, 0 otherwise.",
-	})
-	moduleReachable = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "cve_2022_27666_module_reachable",
-		Help: "1 if the AF_ALG module and algorithm are reachable, 0 otherwise.",
-	})
-	remediationApplied = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "cve_2022_27666_remediation_applied",
-		Help: "1 if the algif_aead module was successfully unloaded, 0 otherwise.",
-	})
-	kernelNeedsPatching = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "cve_2022_27666_kernel_needs_patching",
-		Help: "1 if the kernel version is not patched for CVE-2022-27666, 0 otherwise.",
-	})
-
 	// CVE-2026-31431 "Copy Fail"
 	copyFailVulnerable = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "cve_2026_31431_vulnerable",
@@ -37,44 +20,24 @@ var (
 		Name: "cve_2026_31431_kernel_needs_patching",
 		Help: "1 if the kernel version is not patched for CVE-2026-31431, 0 otherwise.",
 	})
+	moduleReachable = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "cve_2026_31431_module_reachable",
+		Help: "1 if the AF_ALG module and algorithm are reachable, 0 otherwise.",
+	})
+	remediationApplied = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "cve_2026_31431_remediation_applied",
+		Help: "1 if the algif_aead module was successfully unloaded, 0 otherwise.",
+	})
 )
 
 func init() {
-	prometheus.MustRegister(kernelVulnerable)
-	prometheus.MustRegister(moduleReachable)
-	prometheus.MustRegister(remediationApplied)
-	prometheus.MustRegister(kernelNeedsPatching)
 	prometheus.MustRegister(copyFailVulnerable)
 	prometheus.MustRegister(copyFailNeedsPatching)
+	prometheus.MustRegister(moduleReachable)
+	prometheus.MustRegister(remediationApplied)
 }
 
 func check() {
-	vulnerable, reason, err := detector.IsVulnerableCVE202227666()
-	if err != nil {
-		log.Printf("check error: %v", err)
-		return
-	}
-
-	log.Printf("check: %s", reason)
-
-	needsPatching, patchDetail, patchErr := detector.KernelNeedsPatching()
-	if patchErr != nil {
-		log.Printf("patch check error: %v", patchErr)
-	} else {
-		log.Printf("patch check: %s", patchDetail)
-		if needsPatching {
-			kernelNeedsPatching.Set(1)
-		} else {
-			kernelNeedsPatching.Set(0)
-		}
-	}
-
-	if vulnerable {
-		kernelVulnerable.Set(1)
-	} else {
-		kernelVulnerable.Set(0)
-	}
-
 	// --- CVE-2026-31431 (Copy Fail) ---
 	cfVuln, cfReason, cfErr := detector.IsVulnerableCVE202631431()
 	if cfErr != nil {
