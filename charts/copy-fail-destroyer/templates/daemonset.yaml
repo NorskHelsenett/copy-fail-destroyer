@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "copy-fail-destroyer.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "copy-fail-destroyer.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "copy-fail-destroyer.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "copy-fail-destroyer.selectorLabels" . | nindent 8 }}
+      annotations:
+        {{- if .Values.metrics.prometheusScrape }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.metrics.port | quote }}
+        {{- end }}
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: destroyer
+          image: "{{ .Values.image.repository }}:{{ include "copy-fail-destroyer.imageTag" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.metrics.port }}
+              name: metrics
+          securityContext:
+            privileged: true
+            readOnlyRootFilesystem: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

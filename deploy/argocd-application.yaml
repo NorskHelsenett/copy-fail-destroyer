@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: copy-fail-destroyer
+  namespace: argocd
+spec:
+  project: default
+  source:
+    chart: copy-fail-destroyer
+    repoURL: ghcr.io/norskhelsenett/helm
+    targetRevision: 0.1.0
+    helm:
+      releaseName: copy-fail-destroyer
+      valuesObject: {}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: copy-fail-destroyer
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false

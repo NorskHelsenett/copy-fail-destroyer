@@ -78,6 +78,19 @@ kubectl apply -f deploy/policy-exceptions.yaml
 kubectl apply -f deploy/daemonset.yaml
 ```
 
+### Helm
+
+```bash
+helm install copy-fail-destroyer oci://ghcr.io/norskhelsenett/helm/copy-fail-destroyer \
+  --namespace copy-fail-destroyer --create-namespace
+```
+
+### ArgoCD
+
+```bash
+kubectl apply -f deploy/argocd-application.yaml
+```
+
 The DaemonSet includes Prometheus scrape annotations (`prometheus.io/scrape: "true"`, port `9100`).
 
 ## CI/CD
@@ -87,6 +100,7 @@ A GitHub Actions workflow (`.github/workflows/build.yaml`) triggers on versioned
 1. Runs `go test ./...`
 2. Builds the Linux binary
 3. Builds and pushes a container image to `ghcr.io/norskhelsenett/copy-fail-destroyer`
+4. Packages and pushes the Helm chart to `oci://ghcr.io/norskhelsenett/helm/copy-fail-destroyer`
 
 Tags are derived from the Git tag — e.g. pushing `v1.2.3` produces image tags `1.2.3` and `1.2`.
 

@@ -1,0 +1,11 @@
+apiVersion: v2
+name: copy-fail-destroyer
+description: DaemonSet agent that detects and remediates CVE-2026-31431 (Copy Fail) on Kubernetes nodes
+type: application
+version: 0.1.0
+appVersion: "0.1.4"
+home: https://github.com/NorskHelsenett/copy-fail-destroyer
+sources:
+  - https://github.com/NorskHelsenett/copy-fail-destroyer
+maintainers:
+  - name: NorskHelsenett

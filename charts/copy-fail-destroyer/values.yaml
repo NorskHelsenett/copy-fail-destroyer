@@ -1,0 +1,24 @@
+image:
+  repository: ghcr.io/norskhelsenett/copy-fail-destroyer
+  tag: ""  # defaults to appVersion
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 50m
+    memory: 64Mi
+
+metrics:
+  port: 9100
+  prometheusScrape: true
+
+namespace:
+  create: true
+  podSecurityLabels: true
+
+tolerations: []
+
+nodeSelector: {}
