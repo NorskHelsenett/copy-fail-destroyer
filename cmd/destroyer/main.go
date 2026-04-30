@@ -27,6 +27,16 @@ var (
 		Name: "cve_2022_27666_kernel_needs_patching",
 		Help: "1 if the kernel version is not patched for CVE-2022-27666, 0 otherwise.",
 	})
+
+	// CVE-2026-31431 "Copy Fail"
+	copyFailVulnerable = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "cve_2026_31431_vulnerable",
+		Help: "1 if the kernel is vulnerable to CVE-2026-31431 (Copy Fail) and module is reachable, 0 otherwise.",
+	})
+	copyFailNeedsPatching = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "cve_2026_31431_kernel_needs_patching",
+		Help: "1 if the kernel version is not patched for CVE-2026-31431, 0 otherwise.",
+	})
 )
 
 func init() {
@@ -34,6 +44,8 @@ func init() {
 	prometheus.MustRegister(moduleReachable)
 	prometheus.MustRegister(remediationApplied)
 	prometheus.MustRegister(kernelNeedsPatching)
+	prometheus.MustRegister(copyFailVulnerable)
+	prometheus.MustRegister(copyFailNeedsPatching)
 }
 
 func check() {
@@ -61,6 +73,31 @@ func check() {
 		kernelVulnerable.Set(1)
 	} else {
 		kernelVulnerable.Set(0)
+	}
+
+	// --- CVE-2026-31431 (Copy Fail) ---
+	cfVuln, cfReason, cfErr := detector.IsVulnerableCVE202631431()
+	if cfErr != nil {
+		log.Printf("CVE-2026-31431 check error: %v", cfErr)
+	} else {
+		log.Printf("CVE-2026-31431 check: %s", cfReason)
+		if cfVuln {
+			copyFailVulnerable.Set(1)
+		} else {
+			copyFailVulnerable.Set(0)
+		}
+	}
+
+	cfNeedsPatch, cfPatchDetail, cfPatchErr := detector.KernelNeedsPatchingCVE202631431()
+	if cfPatchErr != nil {
+		log.Printf("CVE-2026-31431 patch check error: %v", cfPatchErr)
+	} else {
+		log.Printf("CVE-2026-31431 patch check: %s", cfPatchDetail)
+		if cfNeedsPatch {
+			copyFailNeedsPatching.Set(1)
+		} else {
+			copyFailNeedsPatching.Set(0)
+		}
 	}
 
 	reachable, probeDetail := detector.ProbeAFALG()
