@@ -3,7 +3,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: {{ include "copy-fail-destroyer.name" . }}
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ .Values.metrics.prometheusRule.namespace | default .Release.Namespace }}
   labels:
     {{- include "copy-fail-destroyer.labels" . | nindent 4 }}
     {{- with .Values.metrics.prometheusRule.labels }}
@@ -15,7 +15,7 @@ spec:
       rules:
         - alert: CopyFailVulnerable
           expr: cve_2026_31431_vulnerable == 1
-          for: 5m
+          for: 1m
           labels:
             severity: critical
             {{- with .Values.metrics.prometheusRule.extraAlertLabelsCopyFailVulnerable }}
@@ -30,7 +30,7 @@ spec:
 
         - alert: CopyFailKernelNeedsPatching
           expr: cve_2026_31431_kernel_needs_patching == 1
-          for: 5m
+          for: 1m
           labels:
             severity: warning
             {{- with .Values.metrics.prometheusRule.extraAlertLabelsCopyFailKernelNeedsPatching }}
@@ -45,7 +45,7 @@ spec:
 
         - alert: CopyFailRemediationFailed
           expr: cve_2026_31431_module_reachable == 1 and cve_2026_31431_remediation_applied == 0
-          for: 10m
+          for: 3m
           labels:
             severity: warning
             {{- with .Values.metrics.prometheusRule.extraAlertLabelsCopyFailRemediationFailed }}
