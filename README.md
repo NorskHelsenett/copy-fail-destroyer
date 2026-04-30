@@ -73,18 +73,12 @@ docker build -t copy-fail-destroyer .
 
 ## Deployment
 
-The agent runs in a dedicated namespace with a `privileged` Pod Security Admission policy. The container itself is **not** fully privileged — it only requests the specific capabilities it needs:
+The agent requires a privileged security context to unload kernel modules and probe `AF_ALG` sockets. The root filesystem is read-only.
 
-- `CAP_SYS_MODULE` — to unload `algif_aead` via `delete_module`
-- `CAP_NET_ADMIN` — to create `AF_ALG` sockets for probing
-
-All other capabilities are dropped, and the root filesystem is read-only.
-
-If your cluster uses Kyverno, apply the policy exceptions first — the agent requires root and capabilities that standard policies block:
+### Raw manifests
 
 ```bash
 kubectl apply -f deploy/namespace.yaml
-kubectl apply -f deploy/policy-exceptions.yaml
 kubectl apply -f deploy/daemonset.yaml
 ```
 
@@ -95,7 +89,17 @@ helm install copy-fail-destroyer oci://ghcr.io/norskhelsenett/helm/copy-fail-des
   --namespace copy-fail-destroyer --create-namespace
 ```
 
+Override the remediation mode:
+
+```bash
+helm install copy-fail-destroyer oci://ghcr.io/norskhelsenett/helm/copy-fail-destroyer \
+  --namespace copy-fail-destroyer --create-namespace \
+  --set remediationMode=disabled
+```
+
 ### ArgoCD
+
+An Application manifest is provided at `deploy/argocd-application.yaml`. Edit `targetRevision` to pin a chart version:
 
 ```bash
 kubectl apply -f deploy/argocd-application.yaml
