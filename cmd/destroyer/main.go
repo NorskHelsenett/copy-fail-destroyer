@@ -34,6 +34,13 @@ var (
 		Name: "cve_2026_31431_af_alg_aead_refcount",
 		Help: "Reference count of the algif_aead kernel module; >0 means at least one process has an active AF_ALG AEAD socket open. -1 means the module is built into the kernel and usage cannot be tracked via /proc/modules.",
 	})
+	activeAFALGAeadSocketUsers = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "cve_2026_31431_af_alg_aead_socket_users",
+		Help: "Number of processes on this node with an active AF_ALG AEAD socket open (per-process scan via pidfd_getfd). " +
+			">0 means unloading algif_aead will disrupt those processes. " +
+			"-1 means the scan is disabled or pidfd_getfd is not supported (kernel < 5.6). " +
+			"Requires SOCKET_SCAN_ENABLED=true and hostPID: true.",
+	})
 )
 
 func init() {
@@ -42,6 +49,7 @@ func init() {
 	prometheus.MustRegister(moduleReachable)
 	prometheus.MustRegister(remediationApplied)
 	prometheus.MustRegister(activeAFALGAeadUsers)
+	prometheus.MustRegister(activeAFALGAeadSocketUsers)
 }
 
 func check() {
@@ -87,6 +95,16 @@ func check() {
 	} else {
 		log.Printf("AF_ALG AEAD module usage: %s", refDetail)
 		activeAFALGAeadUsers.Set(float64(max(0, refcount)))
+	}
+
+	// Per-process socket scan (optional, enabled by default).
+	// Requires hostPID: true so that /proc exposes all host processes.
+	if strings.ToLower(strings.TrimSpace(os.Getenv("SOCKET_SCAN_ENABLED"))) != "false" {
+		scanCount, scanDetail := detector.ScanAFALGAeadSockets()
+		log.Printf("AF_ALG AEAD socket scan: %s", scanDetail)
+		activeAFALGAeadSocketUsers.Set(float64(scanCount))
+	} else {
+		activeAFALGAeadSocketUsers.Set(-1)
 	}
 
 	// Remediate: if the module is reachable, act based on REMEDIATION_MODE.

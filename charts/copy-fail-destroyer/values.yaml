@@ -36,6 +36,13 @@ metrics:
 # Remediation mode: "unload" (default), "blacklist" (unload + modprobe blacklist), or "disabled" (detect only)
 remediationMode: unload
 
+# socketScan enables the per-process AF_ALG AEAD socket scan via pidfd_getfd.
+# When enabled, the pod runs with hostPID: true so that /proc exposes all node
+# processes. Requires Linux 5.6+ on the node (kernel 5.14+ on RHEL 9 qualifies).
+# Disable if the broader hostPID attack surface is not acceptable in your environment.
+socketScan:
+  enabled: true
+
 namespace:
   create: true
   podSecurityLabels: true

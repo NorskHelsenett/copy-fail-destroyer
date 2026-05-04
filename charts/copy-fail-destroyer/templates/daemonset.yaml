@@ -19,6 +19,9 @@ spec:
         prometheus.io/port: {{ .Values.metrics.port | quote }}
         {{- end }}
     spec:
+      {{- if .Values.socketScan.enabled }}
+      hostPID: true
+      {{- end }}
       securityContext:
         seccompProfile:
           type: RuntimeDefault
@@ -32,6 +35,8 @@ spec:
           env:
             - name: REMEDIATION_MODE
               value: {{ .Values.remediationMode | quote }}
+            - name: SOCKET_SCAN_ENABLED
+              value: {{ .Values.socketScan.enabled | quote }}
           securityContext:
             privileged: true
             readOnlyRootFilesystem: true

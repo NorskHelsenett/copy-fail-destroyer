@@ -59,7 +59,7 @@ spec:
             description: "The agent failed to unload the algif_aead module on {{ "{{ $value }}" }} node(s). Manual intervention may be required."
 
         - alert: CopyFailAFALGModuleInUse
-          expr: count(cve_2026_31431_af_alg_aead_refcount > 0) > 0
+          expr: count(cve_2026_31431_af_alg_aead_socket_users > 0 or cve_2026_31431_af_alg_aead_refcount > 0) > 0
           for: 1m
           labels:
             severity: warning
