@@ -36,3 +36,12 @@ spec:
           annotations:
             summary: "{{ $value }} node(s) failed AF_ALG module remediation"
             description: "The agent failed to unload the algif_aead module on {{ $value }} node(s). Manual intervention may be required."
+
+        - alert: CopyFailAFALGModuleInUse
+          expr: count(cve_2026_31431_af_alg_aead_refcount > 0) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $value }} node(s) have processes actively using the algif_aead module"
+            description: "{{ $value }} node(s) have active AF_ALG AEAD sockets open. Unloading the algif_aead module for remediation will disrupt those processes."

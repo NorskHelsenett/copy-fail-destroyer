@@ -30,6 +30,10 @@ var (
 		Name: "cve_2026_31431_remediation_applied",
 		Help: "1 if the algif_aead module was successfully unloaded, 0 otherwise.",
 	})
+	activeAFALGAeadUsers = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "cve_2026_31431_af_alg_aead_refcount",
+		Help: "Reference count of the algif_aead kernel module; >0 means at least one process has an active AF_ALG AEAD socket open. -1 means the module is built into the kernel and usage cannot be tracked via /proc/modules.",
+	})
 )
 
 func init() {
@@ -37,6 +41,7 @@ func init() {
 	prometheus.MustRegister(copyFailNeedsPatching)
 	prometheus.MustRegister(moduleReachable)
 	prometheus.MustRegister(remediationApplied)
+	prometheus.MustRegister(activeAFALGAeadUsers)
 }
 
 func check() {
@@ -70,6 +75,18 @@ func check() {
 		moduleReachable.Set(1)
 	} else {
 		moduleReachable.Set(0)
+	}
+
+	refcount, refDetail := detector.AFALGAeadModuleRefcount()
+	if refcount < 0 && reachable {
+		// algif_aead is not listed in /proc/modules but the AF_ALG socket is
+		// reachable — the functionality is compiled into the kernel as a
+		// built-in. Per-socket usage tracking via module refcount is unavailable.
+		log.Printf("AF_ALG AEAD module usage: algif_aead not found in /proc/modules but socket is reachable — likely built into the kernel; per-socket tracking unavailable")
+		activeAFALGAeadUsers.Set(-1)
+	} else {
+		log.Printf("AF_ALG AEAD module usage: %s", refDetail)
+		activeAFALGAeadUsers.Set(float64(max(0, refcount)))
 	}
 
 	// Remediate: if the module is reachable, act based on REMEDIATION_MODE.
