@@ -5,6 +5,7 @@ package detector
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -12,6 +13,22 @@ import (
 
 	"golang.org/x/sys/unix"
 )
+
+var debugLogging = os.Getenv("DEBUG") != ""
+
+func debugLog(format string, args ...any) {
+	if debugLogging {
+		log.Printf("[debug] "+format, args...)
+	}
+}
+
+func procComm(pid int) string {
+	b, err := os.ReadFile(fmt.Sprintf("/proc/%d/comm", pid))
+	if err != nil {
+		return "?"
+	}
+	return strings.TrimSpace(string(b))
+}
 
 // ScanAFALGAeadSockets returns the number of processes on the node that
 // currently hold at least one AF_ALG AEAD socket open. It works by walking
@@ -35,6 +52,7 @@ func ScanAFALGAeadSockets() (count int, detail string) {
 	}
 
 	selfPID := os.Getpid()
+	debugLog("scanning %d /proc entries (self pid %d)", len(entries), selfPID)
 
 	for _, e := range entries {
 		pid, err := strconv.Atoi(e.Name())
@@ -47,7 +65,7 @@ func ScanAFALGAeadSockets() (count int, detail string) {
 			if errors.Is(err, unix.ENOSYS) {
 				return -1, "pidfd_getfd not supported on this kernel (requires Linux 5.6+)"
 			}
-			// Process exited or transient permission error — skip.
+			debugLog("pid %d (%s): scan error: %v", pid, procComm(pid), err)
 			continue
 		}
 		if found {
@@ -71,9 +89,12 @@ func processHasAEADSocket(pid int) (bool, error) {
 		return false, err // process may have exited
 	}
 
+	comm := procComm(pid)
+
 	// Open a pidfd once for the whole process; reused for every PidfdGetfd call.
 	pidfd, err := unix.PidfdOpen(pid, 0)
 	if err != nil {
+		debugLog("pid %d (%s): pidfd_open: %v", pid, comm, err)
 		return false, err // process exited between ReadDir and here
 	}
 	defer unix.Close(pidfd)
@@ -95,29 +116,30 @@ func processHasAEADSocket(pid int) (bool, error) {
 			if errors.Is(err, unix.ENOSYS) {
 				return false, unix.ENOSYS // propagate: kernel too old
 			}
-			// fd closed between ReadDir and PidfdGetfd, or transient error.
+			debugLog("pid %d (%s) fd %s: pidfd_getfd: %v", pid, comm, e.Name(), err)
 			continue
 		}
 
-		isAEAD := isAFALGAeadSocket(dupFd)
+		sa, gsErr := unix.Getsockname(dupFd)
 		unix.Close(dupFd)
 
-		if isAEAD {
+		if gsErr != nil {
+			debugLog("pid %d (%s) fd %s: getsockname: %v", pid, comm, e.Name(), gsErr)
+			continue
+		}
+
+		alg, ok := sa.(*unix.SockaddrALG)
+		if !ok {
+			continue // not AF_ALG — expected for most sockets
+		}
+
+		debugLog("pid %d (%s) fd %s: AF_ALG socket type=%q name=%q", pid, comm, e.Name(), alg.Type, alg.Name)
+
+		if alg.Type == "aead" {
+			debugLog("pid %d (%s) fd %s: MATCH — AF_ALG AEAD socket", pid, comm, e.Name())
 			return true, nil // early exit: no need to inspect remaining fds
 		}
 	}
 
 	return false, nil
-}
-
-// isAFALGAeadSocket returns true if fd is an AF_ALG socket bound to an aead
-// algorithm type. Works for both parent sockets (after bind) and accepted child
-// sockets. Returns false for any error or non-matching socket type.
-func isAFALGAeadSocket(fd int) bool {
-	sa, err := unix.Getsockname(fd)
-	if err != nil {
-		return false
-	}
-	alg, ok := sa.(*unix.SockaddrALG)
-	return ok && alg.Type == "aead"
 }

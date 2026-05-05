@@ -37,6 +37,8 @@ spec:
               value: {{ .Values.remediationMode | quote }}
             - name: SOCKET_SCAN_ENABLED
               value: {{ .Values.socketScan.enabled | quote }}
+            - name: DEBUG
+              value: {{ .Values.debug | quote }}
           securityContext:
             privileged: true
             readOnlyRootFilesystem: true

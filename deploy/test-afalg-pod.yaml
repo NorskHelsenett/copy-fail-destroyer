@@ -5,7 +5,7 @@ metadata:
 spec:
   containers:
     - name: holder
-      image: copy-fail-destroyer:0.2.1
+      image: copy-fail-destroyer:0.2.2
       command: ["/destroyer", "hold-afalg"]
       resources:
         requests:

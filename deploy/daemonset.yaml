@@ -30,6 +30,8 @@ spec:
           env:
             - name: SOCKET_SCAN_ENABLED
               value: "true"
+            - name: DEBUG
+              value: ""
           securityContext:
             privileged: true
             readOnlyRootFilesystem: true
@@ -40,3 +42,13 @@ spec:
             limits:
               cpu: 50m
               memory: 64Mi
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/infra"
+          operator: "Exists"
+          effect: "NoSchedule"
