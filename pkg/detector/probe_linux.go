@@ -3,6 +3,7 @@ package detector
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -46,5 +47,7 @@ func HoldAFALGSocket() error {
 		return fmt.Errorf("AF_ALG bind: %w", err)
 	}
 	log.Println("AF_ALG AEAD socket open and bound — holding for test")
-	select {} // block forever; fd stays open
+	for {
+		time.Sleep(time.Hour)
+	}
 }
