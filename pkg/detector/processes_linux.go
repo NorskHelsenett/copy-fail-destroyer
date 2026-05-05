@@ -31,13 +31,16 @@ func procComm(pid int) string {
 }
 
 // ScanAFALGAeadSockets returns the number of processes on the node that
-// currently hold at least one AF_ALG AEAD socket open. It works by walking
+// currently hold at least one AF_ALG socket open. It works by walking
 // /proc/<pid>/fd for every visible process, duplicating each socket file
 // descriptor into the current process via pidfd_getfd (Linux 5.6+), and
-// calling getsockname to inspect the bound algorithm type.
+// calling getsockopt(SO_DOMAIN) to check the socket family.
 //
-// This approach works whether algif_aead is a loadable module or compiled
-// into the kernel as a built-in.
+// Note: the Linux kernel does not implement getsockname for AF_ALG sockets
+// (alg_proto_ops uses sock_no_getname), so the algorithm type (aead vs hash
+// vs skcipher) cannot be determined from the socket FD alone. All AF_ALG
+// sockets are counted. The module refcount metric provides aead-specific
+// confirmation that algif_aead is actually in use.
 //
 // Returns -1 when pidfd_getfd is not supported by the kernel (< 5.6) or when
 // /proc cannot be read.
@@ -120,25 +123,22 @@ func processHasAEADSocket(pid int) (bool, error) {
 			continue
 		}
 
-		sa, gsErr := unix.Getsockname(dupFd)
+		// getsockname is not implemented for AF_ALG sockets (sock_no_getname in
+		// alg_proto_ops), so use SO_DOMAIN to read the socket family instead.
+		family, soErr := unix.GetsockoptInt(dupFd, unix.SOL_SOCKET, unix.SO_DOMAIN)
 		unix.Close(dupFd)
 
-		if gsErr != nil {
-			debugLog("pid %d (%s) fd %s: getsockname: %v", pid, comm, e.Name(), gsErr)
+		if soErr != nil {
+			debugLog("pid %d (%s) fd %s: SO_DOMAIN: %v", pid, comm, e.Name(), soErr)
 			continue
 		}
 
-		alg, ok := sa.(*unix.SockaddrALG)
-		if !ok {
-			continue // not AF_ALG — expected for most sockets
+		if family != unix.AF_ALG {
+			continue
 		}
 
-		debugLog("pid %d (%s) fd %s: AF_ALG socket type=%q name=%q", pid, comm, e.Name(), alg.Type, alg.Name)
-
-		if alg.Type == "aead" {
-			debugLog("pid %d (%s) fd %s: MATCH — AF_ALG AEAD socket", pid, comm, e.Name())
-			return true, nil // early exit: no need to inspect remaining fds
-		}
+		debugLog("pid %d (%s) fd %s: MATCH — AF_ALG socket (family %d)", pid, comm, e.Name(), family)
+		return true, nil // early exit: no need to inspect remaining fds
 	}
 
 	return false, nil

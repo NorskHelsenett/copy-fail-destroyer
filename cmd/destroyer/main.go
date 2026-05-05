@@ -36,8 +36,10 @@ var (
 	})
 	activeAFALGAeadSocketUsers = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "cve_2026_31431_af_alg_aead_socket_users",
-		Help: "Number of processes on this node with an active AF_ALG AEAD socket open (per-process scan via pidfd_getfd). " +
-			">0 means unloading algif_aead will disrupt those processes. " +
+		Help: "Number of processes on this node with an active AF_ALG socket open (per-process scan via pidfd_getfd). " +
+			"The Linux kernel does not implement getsockname for AF_ALG sockets, so all AF_ALG sockets are counted " +
+			"regardless of algorithm type; combine with af_alg_aead_refcount to confirm algif_aead is in use. " +
+			">0 means unloading algif_aead may disrupt those processes. " +
 			"-1 means the scan is disabled or pidfd_getfd is not supported (kernel < 5.6). " +
 			"Requires SOCKET_SCAN_ENABLED=true and hostPID: true.",
 	})
