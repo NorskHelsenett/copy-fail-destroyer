@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: afalg-test
+  namespace: default
+spec:
+  containers:
+    - name: holder
+      image: ghcr.io/norskhelsenett/copy-fail-destroyer:latest
+      command: ["/destroyer", "hold-afalg"]
+      resources:
+        requests:
+          cpu: 1m
+          memory: 8Mi
+        limits:
+          cpu: 10m
+          memory: 16Mi
+  restartPolicy: Never

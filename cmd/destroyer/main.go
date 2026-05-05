@@ -149,6 +149,13 @@ func check() {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "hold-afalg" {
+		if err := detector.HoldAFALGSocket(); err != nil {
+			log.Fatalf("hold-afalg: %v", err)
+		}
+		return
+	}
+
 	check()
 
 	go func() {
