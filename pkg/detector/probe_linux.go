@@ -2,6 +2,8 @@ package detector
 
 import (
 	"fmt"
+	"log"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -26,4 +28,26 @@ func ProbeAFALG() (reachable bool, detail string) {
 	}
 
 	return true, "AF_ALG aead authenc(hmac(sha256),cbc(aes)) is reachable"
+}
+
+// HoldAFALGSocket opens and binds an AF_ALG AEAD socket and blocks forever,
+// keeping the file descriptor open. Used by the hold-afalg subcommand to
+// provide a live target for the per-process socket scan.
+func HoldAFALGSocket() error {
+	fd, err := unix.Socket(38, unix.SOCK_SEQPACKET, 0)
+	if err != nil {
+		return fmt.Errorf("AF_ALG socket: %w", err)
+	}
+	addr := &unix.SockaddrALG{
+		Type: "aead",
+		Name: "authenc(hmac(sha256),cbc(aes))",
+	}
+	if err := unix.Bind(fd, addr); err != nil {
+		unix.Close(fd)
+		return fmt.Errorf("AF_ALG bind: %w", err)
+	}
+	log.Println("AF_ALG AEAD socket open and bound — holding for test")
+	for {
+		time.Sleep(time.Hour)
+	}
 }

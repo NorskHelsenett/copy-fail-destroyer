@@ -29,16 +29,37 @@ metrics:
     extraAlertLabelsCopyFailVulnerable: {}
     extraAlertLabelsCopyFailKernelNeedsPatching: {}
     extraAlertLabelsCopyFailRemediationFailed: {}
+    extraAlertLabelsCopyFailAFALGModuleInUse: {}
     #  team: platform
     #  environment: production
 
 # Remediation mode: "unload" (default), "blacklist" (unload + modprobe blacklist), or "disabled" (detect only)
 remediationMode: unload
 
+# debug enables verbose per-process logging of the socket scan (env var DEBUG=true).
+# Useful for troubleshooting; leave empty ("") in production to avoid log noise.
+debug: ""
+
+# socketScan enables the per-process AF_ALG AEAD socket scan via pidfd_getfd.
+# When enabled, the pod runs with hostPID: true so that /proc exposes all node
+# processes. Requires Linux 5.6+ on the node (kernel 5.14+ on RHEL 9 qualifies).
+# Disable if the broader hostPID attack surface is not acceptable in your environment.
+socketScan:
+  enabled: true
+
 namespace:
   create: true
   podSecurityLabels: true
 
-tolerations: []
+tolerations:
+  - key: "node-role.kubernetes.io/control-plane"
+    operator: "Exists"
+    effect: "NoSchedule"
+  - key: "node-role.kubernetes.io/master"
+    operator: "Exists"
+    effect: "NoSchedule"
+  - key: "node-role.kubernetes.io/infra"
+    operator: "Exists"
+    effect: "NoSchedule"
 
 nodeSelector: {}

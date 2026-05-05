@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: afalg-test
+spec:
+  containers:
+    - name: holder
+      image: copy-fail-destroyer:0.2.2
+      command: ["/destroyer", "hold-afalg"]
+      resources:
+        requests:
+          cpu: 10m
+          memory: 50Mi
+        limits:
+          cpu: 10m
+          memory: 50Mi
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
+  tolerations:
+    - key: "node-role.kubernetes.io/master"
+      operator: "Exists"
+      effect: "NoSchedule"
+  restartPolicy: Never

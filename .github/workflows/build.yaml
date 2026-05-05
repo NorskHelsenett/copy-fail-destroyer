@@ -60,6 +60,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           sed -i "s/^version:.*/version: ${VERSION}/" charts/copy-fail-destroyer/Chart.yaml
           sed -i "s/^appVersion:.*/appVersion: \"${VERSION}\"/" charts/copy-fail-destroyer/Chart.yaml
+          sed -i "s|repository: ghcr.io/.*|repository: ghcr.io/${{ github.repository }}|" charts/copy-fail-destroyer/values.yaml
           helm package charts/copy-fail-destroyer
 
       - name: Push Helm chart to OCI
@@ -67,4 +68,4 @@ jobs:
           HELM_EXPERIMENTAL_OCI: "1"
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
-          helm push copy-fail-destroyer-*.tgz oci://ghcr.io/norskhelsenett/helm
+          helm push copy-fail-destroyer-*.tgz oci://ghcr.io/${{ github.repository_owner }}/helm
