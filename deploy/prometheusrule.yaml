@@ -36,3 +36,30 @@ spec:
           annotations:
             summary: "{{ $value }} node(s) failed AF_ALG module remediation"
             description: "The agent failed to unload the algif_aead module on {{ $value }} node(s). Manual intervention may be required."
+
+        - alert: DirtyFragVulnerable
+          expr: count(dirty_frag_vulnerable == 1) > 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $value }} node(s) vulnerable to Dirty Frag (ESP/RxRPC page-cache write)"
+            description: "Kernel is vulnerable and esp4/esp6/rxrpc modules are reachable on {{ $value }} node(s). Remediation has not succeeded."
+
+        - alert: DirtyFragKernelNeedsPatching
+          expr: count(dirty_frag_kernel_needs_patching == 1) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $value }} node(s) need kernel patching for Dirty Frag"
+            description: "{{ $value }} node(s) are running unpatched kernels for the Dirty Frag vulnerability. Modules may be unreachable (mitigated) but the kernel should still be updated."
+
+        - alert: DirtyFragRemediationFailed
+          expr: count(((dirty_frag_esp_module_reachable == 1) or (dirty_frag_rxrpc_module_reachable == 1)) and (dirty_frag_remediation_applied == 0)) > 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $value }} node(s) failed Dirty Frag module remediation"
+            description: "The agent failed to unload esp4/esp6/rxrpc modules on {{ $value }} node(s). Manual intervention may be required."

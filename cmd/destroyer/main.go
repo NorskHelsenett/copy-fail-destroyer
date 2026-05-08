@@ -30,6 +30,28 @@ var (
 		Name: "cve_2026_31431_remediation_applied",
 		Help: "1 if the algif_aead module was successfully unloaded, 0 otherwise.",
 	})
+
+	// Dirty Frag
+	dirtyFragVulnerable = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "dirty_frag_vulnerable",
+		Help: "1 if the kernel is vulnerable to Dirty Frag (ESP or RxRPC variant) and modules are reachable, 0 otherwise.",
+	})
+	dirtyFragKernelNeedsPatching = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "dirty_frag_kernel_needs_patching",
+		Help: "1 if the kernel version is not patched for Dirty Frag (either variant), 0 otherwise.",
+	})
+	dirtyFragESPReachable = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "dirty_frag_esp_module_reachable",
+		Help: "1 if the esp4 or esp6 kernel module is loaded or available on disk, 0 otherwise.",
+	})
+	dirtyFragRxRPCReachable = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "dirty_frag_rxrpc_module_reachable",
+		Help: "1 if the rxrpc kernel module is loaded or available on disk, 0 otherwise.",
+	})
+	dirtyFragRemediationApplied = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "dirty_frag_remediation_applied",
+		Help: "1 if the Dirty Frag module mitigations have been applied, 0 otherwise.",
+	})
 )
 
 func init() {
@@ -37,6 +59,11 @@ func init() {
 	prometheus.MustRegister(copyFailNeedsPatching)
 	prometheus.MustRegister(moduleReachable)
 	prometheus.MustRegister(remediationApplied)
+	prometheus.MustRegister(dirtyFragVulnerable)
+	prometheus.MustRegister(dirtyFragKernelNeedsPatching)
+	prometheus.MustRegister(dirtyFragESPReachable)
+	prometheus.MustRegister(dirtyFragRxRPCReachable)
+	prometheus.MustRegister(dirtyFragRemediationApplied)
 }
 
 func check() {
@@ -72,7 +99,7 @@ func check() {
 		moduleReachable.Set(0)
 	}
 
-	// Remediate: if the module is reachable, act based on REMEDIATION_MODE.
+	// Remediate Copy Fail: if the module is reachable, act based on REMEDIATION_MODE.
 	if reachable {
 		mode := strings.ToLower(strings.TrimSpace(os.Getenv("REMEDIATION_MODE")))
 		if mode == "" {
@@ -109,6 +136,89 @@ func check() {
 			}
 		default:
 			log.Printf("unknown REMEDIATION_MODE %q, skipping remediation", mode)
+		}
+	}
+
+	// --- Dirty Frag ---
+	dfVuln, dfReason, dfErr := detector.IsVulnerableDirtyFrag()
+	if dfErr != nil {
+		log.Printf("Dirty Frag check error: %v", dfErr)
+	} else {
+		log.Printf("Dirty Frag check: %s", dfReason)
+		if dfVuln {
+			dirtyFragVulnerable.Set(1)
+		} else {
+			dirtyFragVulnerable.Set(0)
+		}
+	}
+
+	dfNeedsPatch, dfPatchDetail, dfPatchErr := detector.KernelNeedsPatchingDirtyFrag()
+	if dfPatchErr != nil {
+		log.Printf("Dirty Frag patch check error: %v", dfPatchErr)
+	} else {
+		log.Printf("Dirty Frag patch check: %s", dfPatchDetail)
+		if dfNeedsPatch {
+			dirtyFragKernelNeedsPatching.Set(1)
+		} else {
+			dirtyFragKernelNeedsPatching.Set(0)
+		}
+	}
+
+	espReachable, espDetail := detector.ProbeESP()
+	log.Printf("Dirty Frag ESP probe: %s", espDetail)
+	if espReachable {
+		dirtyFragESPReachable.Set(1)
+	} else {
+		dirtyFragESPReachable.Set(0)
+	}
+
+	rxrpcReachable, rxrpcDetail := detector.ProbeRxRPC()
+	log.Printf("Dirty Frag RxRPC probe: %s", rxrpcDetail)
+	if rxrpcReachable {
+		dirtyFragRxRPCReachable.Set(1)
+	} else {
+		dirtyFragRxRPCReachable.Set(0)
+	}
+
+	// Remediate Dirty Frag: if any module is reachable, act based on REMEDIATION_MODE.
+	if espReachable || rxrpcReachable {
+		mode := strings.ToLower(strings.TrimSpace(os.Getenv("REMEDIATION_MODE")))
+		if mode == "" {
+			mode = "unload"
+		}
+
+		switch mode {
+		case "disabled":
+			log.Printf("Dirty Frag modules reachable, remediation disabled by REMEDIATION_MODE")
+		case "unload":
+			log.Printf("Dirty Frag modules reachable, attempting unload")
+			unloaded, detail := detector.UnloadDirtyFragModules()
+			log.Printf("Dirty Frag remediation: %s", detail)
+			if unloaded {
+				dirtyFragRemediationApplied.Set(1)
+				dirtyFragESPReachable.Set(0)
+				dirtyFragRxRPCReachable.Set(0)
+			} else {
+				dirtyFragRemediationApplied.Set(0)
+			}
+		case "blacklist":
+			log.Printf("Dirty Frag modules reachable, attempting unload + blacklist")
+			unloaded, detail := detector.UnloadDirtyFragModules()
+			log.Printf("Dirty Frag remediation (unload): %s", detail)
+			if unloaded {
+				dirtyFragRemediationApplied.Set(1)
+				dirtyFragESPReachable.Set(0)
+				dirtyFragRxRPCReachable.Set(0)
+			} else {
+				dirtyFragRemediationApplied.Set(0)
+			}
+			applied, blDetail := detector.BlacklistDirtyFragModules()
+			log.Printf("Dirty Frag remediation (blacklist): %s", blDetail)
+			if !applied {
+				dirtyFragRemediationApplied.Set(0)
+			}
+		default:
+			log.Printf("unknown REMEDIATION_MODE %q, skipping Dirty Frag remediation", mode)
 		}
 	}
 }
