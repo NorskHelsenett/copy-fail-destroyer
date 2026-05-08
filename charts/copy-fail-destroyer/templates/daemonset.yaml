@@ -37,6 +37,9 @@ spec:
             readOnlyRootFilesystem: true
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: modprobe
+              mountPath: /host/run/modprobe.d
       {{- with .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
@@ -45,3 +48,8 @@ spec:
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      volumes:
+        - name: modprobe
+          hostPath:
+            path: /run/modprobe.d
+            type: DirectoryOrCreate
